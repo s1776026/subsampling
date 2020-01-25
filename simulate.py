@@ -22,7 +22,7 @@ class ParticleSystem:
         self.T_end = T_end
         self.initial_dist_x = initial_dist_x
         self.subsample = subsample
-
+        # Add new interaction functions and names here:
         interaction_functions = {
             "Uniform": Bs.uniform,
             "Zero": Bs.zero,
@@ -52,7 +52,7 @@ class ParticleSystem:
                 self.subsample = self.particles
 
     def set_inital_conditions(self):
-        # Initial condition in velocity
+        # Initial condition in position
         ic_xs = {
             "pos_normal_dn": np.random.normal(
                 loc=1, scale=np.sqrt(2), size=self.particles
@@ -98,16 +98,17 @@ class ParticleSystem:
         """
         particle_interaction = np.zeros(len(x_curr))
         for particle, position in enumerate(x_curr):
+            # Change interactions here. Remember to change both subsampled and full!
             if self.subsample:
                 subsample_mask = np.random.choice(len(x_curr), size=self.subsample)
                 x_subsample = x_curr[subsample_mask]
-                particle_interaction[particle] = (1/ len(x_subsample)) * np.sum(
-                    self.B(x_subsample*position)
+                particle_interaction[particle] = (1 / (len(x_subsample))) * np.sum(
+                    self.B(x_subsample)
                 )
             else:
-                subsample_mask = np.random.choice(len(x_curr), size=5)
-                particle_interaction[particle] = (1/ len(x_curr)) * np.sum(
-                    self.B(x_curr*position)
+                subsample_mask = np.random.choice(len(x_curr), size=50)
+                particle_interaction[particle] = (1 / (len(x_curr))) * np.sum(
+                    self.B(x_curr)
                 )
         return particle_interaction
 
@@ -118,9 +119,10 @@ class ParticleSystem:
             yield x
             interaction = self.calculate_interaction(x)
             self.interaction_data.append(interaction)
+            # Change SDE here in (interaction):
             x = (
                 x
-                + interaction * self.dt
+                + (interaction) * self.dt
                 + np.sqrt(2 * self.D * self.dt) * np.random.normal(size=self.particles)
             )
 
@@ -139,11 +141,13 @@ if __name__ == "__main__":
     parameters = {
         "particles": 100,
         "D": 1.0,
-        "interaction_function": "ExpProd",
-        "initial_dist_x": 0.2 * np.ones(100),
-        "T_end": 5,
+        "interaction_function": "ArcTan",
+        "initial_dist_x": 0 * np.ones(100),
+        "T_end": 50,
         "dt": 0.01,
+        "subsample": False,
     }
+
     import seaborn as sns
 
     sns.set()
@@ -154,19 +158,29 @@ if __name__ == "__main__":
     print("Time taken for full sim: {}".format(datetime.now() - start))
 
     subs_parameters = parameters
-    subs_parameters["subsample"] = 5
+    subs_parameters["subsample"] = 50
     np.random.seed(100)
     start = datetime.now()
+
     PS_sub = ParticleSystem(**subs_parameters)
     t, x_sub = PS_sub.get_trajectories()
     # print(PS_sub.interaction_data)
     # print(PS.interaction_data)
     print("Time taken for subsample sim: {}".format(datetime.now() - start))
-    with sns.color_palette("coolwarm", 200):
-        plt.plot(np.tile(t, (100, 1)).T, x[:, :100], label="Full", alpha=0.8)
-        plt.plot(np.tile(t, (100, 1)).T, x_sub[:, :100], label="Subsample", alpha=0.8)
+
+    # Plotting 5 trajectories
+    with sns.color_palette("coolwarm", 10):
+        plt.plot(np.tile(t, (5, 1)).T, x[:, :5], label="Full", alpha=0.8)
+        plt.plot(np.tile(t, (5, 1)).T, x_sub[:, :5], label="Subsample", alpha=0.8)
     plt.legend()
+
+    # PLotting average position
     plt.plot(t, np.mean(x_sub, axis=1), "r--")
     plt.plot(t, np.mean(x, axis=1), "g--")
-    plt.ylim((-100,100))
+
+    # plt.ylim((-100,100))
+    plt.show()
+
+    # Histogram of final time step
+    plt.hist(x[-1,].flatten())
     plt.show()

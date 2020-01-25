@@ -1,7 +1,7 @@
 import numpy as np
 
 
-# Define interaction functions
+# Add new interaction functions here:
 def zero(x_i):
     """No interaction between particles"""
     return np.zeros_like(x_i)
@@ -21,13 +21,13 @@ def neg_exp(x_i):
 
 
 def arctan(x_i):
-    return np.arctan(x_i)
+    return -np.arctan(x_i)-3
 
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    x = np.arange(0, np.pi, 0.01)
+    x = np.arange(-10, 10, 0.01)
     for function_str in dir():
         phi_function = eval(function_str)
         if callable(phi_function):

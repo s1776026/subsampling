@@ -85,7 +85,7 @@ def anim_pos_vel_hist(
 
     # Plotting vel histogram
     n_v, bins_v, patches_v = vel_ax.hist(
-        v[0,],
+        v[0, ],
         bins=np.arange(v.min(), v.max(), (v.max() - v.min()) / 30),
         density=True,
         label="Velocity",
@@ -102,7 +102,7 @@ def anim_pos_vel_hist(
 
     # Plotting pos histogram
     n_x, bins_x, patches_x = position_ax.hist(
-        x[0,],
+        x[0, ],
         bins=np.arange(x.min(), x.max(), np.pi / 30),
         density=True,
         label="Position",
