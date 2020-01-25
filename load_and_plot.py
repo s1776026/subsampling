@@ -32,7 +32,7 @@ for i in range(len(full_files)):
     x_sub = sub_data["Position"]
 
     difference.append(np.abs(np.mean(x_full[-1, ]) - np.mean(x_sub[-1, ])))
-    N.append(len(x_full[0,]))
+    N.append(len(x_full[0, ]))
 
 print(difference)
 print(np.sort(N))
