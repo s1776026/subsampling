@@ -9,11 +9,19 @@ def zero(x_i):
 
 def uniform(x_i):
     """All particles interact with every other particle equally"""
-    return np.ones_like(x_i)
+    return -2 * np.ones_like(x_i)
+
+
+def exp_product(x_i):
+    return -np.exp(-x_i)
 
 
 def neg_exp(x_i):
     return -(2 - np.exp(-(x_i ** 2)))
+
+
+def arctan(x_i):
+    return np.arctan(x_i)
 
 
 if __name__ == "__main__":

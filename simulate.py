@@ -27,6 +27,8 @@ class ParticleSystem:
             "Uniform": Bs.uniform,
             "Zero": Bs.zero,
             "Neg Exp": Bs.neg_exp,
+            "ArcTan": Bs.arctan,
+            "ExpProd": Bs.exp_product,
         }
         try:
             self.B = interaction_functions[self.interaction_function]
@@ -76,19 +78,16 @@ class ParticleSystem:
                     loc=1, scale=np.sqrt(self.D), size=self.particles
                 )
             else:
-                print(
-                    "{} is not a valid keyword. Valid initial conditions for positions are {}".format(
-                        error, list(ic_xs.keys())
-                    )
-                )
+                msg = "{} is not a valid keyword. Valid initial conditions"
+                +"for positions are {}"
+                print(msg.format(error, list(ic_xs.keys())))
 
-    def calculate_interaction(self, x_curr, subsample=None):
+    def calculate_interaction(self, x_curr):
         """Calculate interaction term of the full particle system
 
             Args:
                 x_curr: np.array of current particle positions
                 B: interaction function
-                L: domain length, float
 
             Returns:
                 array: The calculated interaction at the current time step for each
@@ -97,17 +96,19 @@ class ParticleSystem:
             See Also:
                 :py:mod:`~particle.interactionfunctions`
         """
+        particle_interaction = np.zeros(len(x_curr))
         for particle, position in enumerate(x_curr):
-
-            if subsample:
-                subsample_mask = np.random.choice(len(x_curr), size=subsample)
+            if self.subsample:
+                subsample_mask = np.random.choice(len(x_curr), size=self.subsample)
                 x_subsample = x_curr[subsample_mask]
-                particle_interaction = (position / len(x_subsample)) * np.sum(
-                    self.B(x_subsample)
+                particle_interaction[particle] = (1/ len(x_subsample)) * np.sum(
+                    self.B(x_subsample*position)
                 )
             else:
-                subsample_mask = np.random.choice(len(x_curr), size=200)
-                particle_interaction = position / len(x_curr) * np.sum(self.B(x_curr))
+                subsample_mask = np.random.choice(len(x_curr), size=5)
+                particle_interaction[particle] = (1/ len(x_curr)) * np.sum(
+                    self.B(x_curr*position)
+                )
         return particle_interaction
 
     def EM_scheme_step(self):
@@ -115,7 +116,7 @@ class ParticleSystem:
         self.interaction_data = []
         while 1:
             yield x
-            interaction = self.calculate_interaction(x, self.subsample)
+            interaction = self.calculate_interaction(x)
             self.interaction_data.append(interaction)
             x = (
                 x
@@ -136,30 +137,36 @@ class ParticleSystem:
 
 if __name__ == "__main__":
     parameters = {
-        "particles": 1000,
-        "D": 1,
-        "interaction_function": "Neg Exp",
-        "initial_dist_x": np.zeros(1000),
+        "particles": 100,
+        "D": 1.0,
+        "interaction_function": "ExpProd",
+        "initial_dist_x": 0.2 * np.ones(100),
+        "T_end": 5,
+        "dt": 0.01,
     }
+    import seaborn as sns
 
+    sns.set()
     np.random.seed(100)
     start = datetime.now()
     PS = ParticleSystem(**parameters)
     t, x = PS.get_trajectories()
-    print("Time taken for full sim: {}".format(datetime.now()-start))
-    plt.plot(np.tile(t, (5, 1)).T, x[:, :5], alpha=0.1, label="Full")
-    plt.plot(t, np.mean(x, axis=1), "r--")
-    # plt.show()
-    subs_parameters = parameters
-    subs_parameters["subsample"] = 200
+    print("Time taken for full sim: {}".format(datetime.now() - start))
 
+    subs_parameters = parameters
+    subs_parameters["subsample"] = 5
     np.random.seed(100)
     start = datetime.now()
     PS_sub = ParticleSystem(**subs_parameters)
     t, x_sub = PS_sub.get_trajectories()
-    print("Time taken for full sim: {}".format(datetime.now()-start))
-    plt.plot(np.tile(t, (5, 1)).T, x_sub[:, :5], alpha=0.1,label="Subsample")
+    # print(PS_sub.interaction_data)
+    # print(PS.interaction_data)
+    print("Time taken for subsample sim: {}".format(datetime.now() - start))
+    with sns.color_palette("coolwarm", 200):
+        plt.plot(np.tile(t, (100, 1)).T, x[:, :100], label="Full", alpha=0.8)
+        plt.plot(np.tile(t, (100, 1)).T, x_sub[:, :100], label="Subsample", alpha=0.8)
     plt.legend()
     plt.plot(t, np.mean(x_sub, axis=1), "r--")
-
+    plt.plot(t, np.mean(x, axis=1), "g--")
+    plt.ylim((-100,100))
     plt.show()
