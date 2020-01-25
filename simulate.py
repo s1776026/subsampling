@@ -106,7 +106,7 @@ class ParticleSystem:
                     self.B(x_subsample)
                 )
             else:
-                subsample_mask = np.random.choice(len(x_curr), size=50)
+                subsample_mask = np.random.choice(len(x_curr), size=int(10))
                 particle_interaction[particle] = (1 / (len(x_curr))) * np.sum(
                     self.B(x_curr)
                 )
