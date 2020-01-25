@@ -1,3 +1,4 @@
+from datetime import datetime as datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import interactionfunctions as Bs
@@ -12,7 +13,7 @@ class ParticleSystem:
         interaction_function="Zero",
         dt=0.1,
         T_end=100,
-        stopping_time=False,
+        subsample=False,
     ):
         self.particles = particles
         self.D = D
@@ -20,6 +21,7 @@ class ParticleSystem:
         self.dt = dt
         self.T_end = T_end
         self.initial_dist_x = initial_dist_x
+        self.subsample = subsample
 
         interaction_functions = {
             "Uniform": Bs.uniform,
@@ -35,6 +37,17 @@ class ParticleSystem:
                 )
             )
             return
+
+        if self.subsample:
+            print("Subsampling with sample size {}".format(self.subsample))
+            if self.subsample > self.particles:
+                print(
+                    "Subsample {} is greater than particle count {}".format(
+                        self.subsample, self.particles
+                    )
+                )
+                print("Setting subsample equal to particle count")
+                self.subsample = self.particles
 
     def set_inital_conditions(self):
         # Initial condition in velocity
@@ -69,7 +82,7 @@ class ParticleSystem:
                     )
                 )
 
-    def calculate_interaction(self, x_curr):
+    def calculate_interaction(self, x_curr, subsample=None):
         """Calculate interaction term of the full particle system
 
             Args:
@@ -84,19 +97,25 @@ class ParticleSystem:
             See Also:
                 :py:mod:`~particle.interactionfunctions`
         """
-        interaction_vector = np.zeros(len(x_curr))
         for particle, position in enumerate(x_curr):
-            particle_interaction = self.B(x_curr)
-            weighted_avg = position * np.sum(particle_interaction)
-            interaction_vector[particle] = weighted_avg / len(x_curr)
-        return interaction_vector
+
+            if subsample:
+                subsample_mask = np.random.choice(len(x_curr), size=subsample)
+                x_subsample = x_curr[subsample_mask]
+                particle_interaction = (position / len(x_subsample)) * np.sum(
+                    self.B(x_subsample)
+                )
+            else:
+                subsample_mask = np.random.choice(len(x_curr), size=200)
+                particle_interaction = position / len(x_curr) * np.sum(self.B(x_curr))
+        return particle_interaction
 
     def EM_scheme_step(self):
         x = self.x0
         self.interaction_data = []
         while 1:
             yield x
-            interaction = self.calculate_interaction(x)
+            interaction = self.calculate_interaction(x, self.subsample)
             self.interaction_data.append(interaction)
             x = (
                 x
@@ -117,15 +136,30 @@ class ParticleSystem:
 
 if __name__ == "__main__":
     parameters = {
-        "particles": 100,
+        "particles": 1000,
+        "D": 1,
         "interaction_function": "Neg Exp",
-        "initial_dist_x": np.zeros(100),
+        "initial_dist_x": np.zeros(1000),
     }
 
+    np.random.seed(100)
+    start = datetime.now()
     PS = ParticleSystem(**parameters)
     t, x = PS.get_trajectories()
-    plt.plot(np.tile(t, (5,1)).T, x[:, :5],alpha=0.1)
-    plt.plot(t, np.mean(x, axis=1),'r--')
+    print("Time taken for full sim: {}".format(datetime.now()-start))
+    plt.plot(np.tile(t, (5, 1)).T, x[:, :5], alpha=0.1, label="Full")
+    plt.plot(t, np.mean(x, axis=1), "r--")
+    # plt.show()
+    subs_parameters = parameters
+    subs_parameters["subsample"] = 200
 
+    np.random.seed(100)
+    start = datetime.now()
+    PS_sub = ParticleSystem(**subs_parameters)
+    t, x_sub = PS_sub.get_trajectories()
+    print("Time taken for full sim: {}".format(datetime.now()-start))
+    plt.plot(np.tile(t, (5, 1)).T, x_sub[:, :5], alpha=0.1,label="Subsample")
+    plt.legend()
+    plt.plot(t, np.mean(x_sub, axis=1), "r--")
 
     plt.show()
